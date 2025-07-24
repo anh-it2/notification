@@ -1,95 +1,129 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client'
+
+import { app, db } from "@/lib/Firebase";
+import{getMessaging, getToken, onMessage} from 'firebase/messaging'
+import { useCallback, useEffect, useRef, useState } from "react";
+import NotificationList from "./Component/NotificationList";
+import { collection, onSnapshot } from "firebase/firestore";
+import { MdNotifications, MdNotificationsActive } from "react-icons/md";
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>app/page.js</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  const observer = useRef()
+  const scrollContainer = useRef()
+
+  const [notify, setNotify] = useState([])
+  const [lastDoc, setLastDoc] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [show, setShow] = useState(false)
+
+  const fetchData = async (lastDoc) => {
+
+    if(!hasMore || loading) return 
+
+    setLoading(true)
+
+    const res = await fetch(`${self.location.origin}/api/fetchNotification`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json'
+      },
+      body:JSON.stringify({
+        lastDoc: lastDoc
+      })
+    })
+
+    const json = await res.json()
+    const data = json.data
+    console.log(data)
+
+    if(data.length % 4 != 0){
+      setHasMore(false)
+    }else{
+      setLastDoc(json.lastDoc)
+    }
+    if(lastDoc === null){
+       setNotify(data)
+    }else{
+       setNotify((prev) => [...prev,...data])
+    }
+
+    console.log(notify)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    const unSubcribe = onSnapshot(collection(db,'notifications'),async () => {
+      await fetchData(null)
+    })
+    return () => unSubcribe()
+  },[])
+
+  useEffect(() => {
+    const messaging = getMessaging(app)
+
+    generateToken(messaging)
+    onMessage(messaging,async (payload) => {
+      console.log(payload)
+
+      const {title, body} = payload.notification
+      const image = payload.notification.image ?? null
+
+      const data = {title, body, image}
+
+      await fetch(`${self.location.origin}/api/saveNotification`,{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json'
+        },
+        body:JSON.stringify({
+          title: title,
+          body: body,
+          image: image
+        })
+      })
+
+      // setNotify((prev) => [data, ...prev])
+
+    })
+    },[])
+
+    const lastNotifyRef = useCallback(node => {
+      if(loading || !node ||!(node instanceof Element)) return 
+      if(observer.current) observer.current.disconnect()
+
+      observer.current = new IntersectionObserver((entries) => {
+        if(entries[0].isIntersecting && hasMore){
+          fetchData(lastDoc)
+        }
+      },{
+        root: scrollContainer.current,
+        rootMargin: '0px',
+        threshold: 1.0
+      })
+
+      observer.current.observe(node)
+    },[loading, hasMore, lastDoc])
+
+  return (
+    <div>
+      <button onClick={() => setShow(!show)}>
+        <MdNotificationsActive />
+      </button>
+      {show && notify.length > 0 && <NotificationList notify={notify} lastNotifyRef={lastNotifyRef} ref={scrollContainer}/>}
+      
     </div>
   );
 }
+
+const generateToken = async (messaging) => {
+    const permission = await Notification.requestPermission()
+
+    if(permission ==="granted"){
+      const token = await getToken(messaging,{
+        vapidKey:process.env.NEXT_PUBLIC_FIREBASE_VAPIDKEY
+      })
+      console.log(token)
+    }
+  }
