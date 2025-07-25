@@ -22,7 +22,7 @@ firebase.initializeApp({
 // messages.
 const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage((payload) => {
+messaging.onBackgroundMessage(async (payload) => {
   console.log(
     '[firebase-messaging-sw.js] Received background message ',
     payload
@@ -33,5 +33,17 @@ messaging.onBackgroundMessage((payload) => {
     body: payload.notification.body,
     icon: payload.notification.image
   };
+
+  await fetch(`${self.location.origin}/api/saveNotification`,{
+    method: 'POST',
+    headers:{
+      'Content-Type':'application/json'
+    },
+    body: JSON.stringify({
+      title: notificationTitle,
+      body: notificationOptions.body,
+      image: notificationOptions.icon
+    })
+  })
 
 });

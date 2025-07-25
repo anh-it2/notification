@@ -5,18 +5,20 @@ import{getMessaging, getToken, onMessage} from 'firebase/messaging'
 import { useCallback, useEffect, useRef, useState } from "react";
 import NotificationList from "./Component/NotificationList";
 import { collection, onSnapshot } from "firebase/firestore";
-import { MdNotifications, MdNotificationsActive } from "react-icons/md";
+import { MdNotificationsActive } from "react-icons/md";
 
 export default function Home() {
 
   const observer = useRef()
   const scrollContainer = useRef()
+  const countRef = useRef(-1)
 
   const [notify, setNotify] = useState([])
   const [lastDoc, setLastDoc] = useState(null)
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [show, setShow] = useState(false)
+  const [unReadNotify, setUnReadNotify] = useState(0)
 
   const fetchData = async (lastDoc) => {
 
@@ -36,9 +38,9 @@ export default function Home() {
 
     const json = await res.json()
     const data = json.data
-    console.log(data)
+    console.log(json.hasMore)
 
-    if(data.length % 4 != 0){
+    if(!json.hasMore){
       setHasMore(false)
     }else{
       setLastDoc(json.lastDoc)
@@ -49,13 +51,22 @@ export default function Home() {
        setNotify((prev) => [...prev,...data])
     }
 
+    setUnReadNotify(json.unReadNoti)
+
     console.log(notify)
     setLoading(false)
   }
 
   useEffect(() => {
-    const unSubcribe = onSnapshot(collection(db,'notifications'),async () => {
-      await fetchData(null)
+    const unSubcribe = onSnapshot(collection(db,'notifications'),async (snapshot) => {
+      // setLastDoc(null)
+      // setHasMore(true)
+      const newCount = snapshot.size;
+      if(newCount !== countRef.current ){
+
+        countRef.current = newCount
+        await fetchData(null)
+      }
     })
     return () => unSubcribe()
   },[])
@@ -107,13 +118,18 @@ export default function Home() {
     },[loading, hasMore, lastDoc])
 
   return (
-    <div>
-      <button onClick={() => setShow(!show)}>
-        <MdNotificationsActive />
+    <>
+      <button onClick={() => setShow(!show)} className="notify-btn">
+        <div className="icon-wrapper">
+          <MdNotificationsActive className="icon"/>
+          {!show && <span className="badge ">{unReadNotify > 99? '99+' : unReadNotify}</span>}
+        </div>
+        {show && notify.length === 0 && <div className="spinner end"></div>}
       </button>
-      {show && notify.length > 0 && <NotificationList notify={notify} lastNotifyRef={lastNotifyRef} ref={scrollContainer}/>}
-      
-    </div>
+
+      {show && notify.length > 0 && <NotificationList notify={notify} setNotify={setNotify}
+      lastNotifyRef={lastNotifyRef} ref={scrollContainer} setUnReadNotify={setUnReadNotify} loading={loading}/>}
+    </>
   );
 }
 

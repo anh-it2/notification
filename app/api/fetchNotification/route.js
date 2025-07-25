@@ -1,5 +1,5 @@
 import { db } from "@/lib/Firebase"
-import { collection, getDoc, getDocs, limit, orderBy, query, startAfter, Timestamp } from "firebase/firestore"
+import { collection, getDoc, getDocs, limit, orderBy, query, startAfter, Timestamp, where } from "firebase/firestore"
 import { NextResponse } from "next/server"
 
 export async function POST(req) {
@@ -14,30 +14,44 @@ export async function POST(req) {
             collection(db,'notifications'),
             orderBy('createdAt','desc'),
             startAfter(timestamp),
-            limit(4)
+            limit(5)
         )
     } else{
         q = query(
             collection(db,'notifications'),
             orderBy('createdAt','desc'),
-            limit(4)
+            limit(5)
         )
     }
 
     const querySnapshot = await getDocs(q)
-    const doc = querySnapshot.docs.map((data) => {
+    let doc = querySnapshot.docs.map((data) => {
         return {
             id: data.id,
             ...data.data()
         }
     })
-    
-    const newLastDoc = querySnapshot.docs.at(-1).data().createdAt
+    let hasMore = false
+    if(doc.length === 5){
+        hasMore = true
+        doc = doc.slice(0,4)
+    }
+
+    const newLastDoc = doc.at(-1).createdAt
+
+    const unRead = query(
+        collection(db,'notifications'),
+        where('read','==',false)
+    )
+    const queryUnReadSnapshot = await getDocs(unRead)
+    const unReadNoti = queryUnReadSnapshot.docs.length
 
     return NextResponse.json({
         success:true,
         data:doc,
-        lastDoc:newLastDoc
+        lastDoc:newLastDoc,
+        unReadNoti: unReadNoti,
+        hasMore: hasMore
     })
     
 }

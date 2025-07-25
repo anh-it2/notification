@@ -6,19 +6,31 @@
 .notificationList{
   width: 300px;
   height: 150px;
-  border: 2px red solid;
+  position: absolute;
+  top:60px;
+  right: 20px;
+  background-color: rgba(128, 128, 128, 0.305);
+  border-radius: 8px;
+  box-shadow: 0px 4px 12px rgba(0,0,0,0.1);
   overflow-y: scroll;
-  padding: 10px 2px;
+  padding: 15px 10px;
+  scrollbar-width: 6px;
+  scrollbar-color: #ccc transparent;
+  scroll-behavior: smooth;
+  z-index: 999;
+}
+.notificationList:focus{
+  outline: none;
 }
 .notificationCard{
   display: flex;
+  margin-bottom: 10px;
   align-items: center;
-  gap: 4px;
-  background-color: rgba(128, 128, 128, 0.305);
-  border: 1px white solid;
+  gap: 10px;
   cursor: pointer;
   padding: 4px;
   border-radius: 10px;
+  height: 60px;
 }
 .title{
   color: black;
@@ -26,4 +38,106 @@
 }
 .body{
   font-size: 12px
+}
+.image{
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+}
+.icon-user{
+  width: 40px;
+  height: 40px;
+}
+.spinner{
+  width: 32px;
+  height: 32px;
+  border: 3px solid #ccc;
+  border-top: 3px solid #1e90ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-top: 16px;
+}
+.middle{
+  margin: 5px auto;
+}
+.end{
+  position: absolute;
+  top:30px;
+  right:10px
+
+}
+@keyframes spin{
+  0% {transform: rotate(0deg);}
+  100% {transform: rotate(360deg);}
+}
+.notify-btn{
+  /* width: 40px; */
+  height: 40px;
+  padding: 0px 5px;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.5 ease;
+  position: absolute;
+  right: 20px;
+  top: 10px
+}
+.notify-btn:hover{
+  background-color: #e0e0e0;
+}
+.notify-btn:hover .icon{
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0% {transform: rotate(0deg);}
+  20% {transform: rotate(-12deg);}
+  40% {transform: rotate(12deg);}
+  60% {transform: rotate(-8deg);}
+  80% {transform: rotate(8deg);}
+  100% {transform: rotate(0deg);}
+}
+
+.icon-wrapper{
+  position: relative;
+  display: inline-block;
+}
+.icon{
+  font-size: 25px;
+  color: #333;
+}
+.badge{
+  position: absolute;
+  width: 23px;
+  height: 23px;
+  top: -15px;
+  right: -13px;
+  background-color: red;
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.unread .circle{
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: red;
+}
+.unread {
+  background-color: #e6f0ff;
+  font-weight: 600;
+  border: none;
+}
+.read{
+  background-color: #f7f7f7;
+  font-weight: 400;
+  border: none;
 }
